@@ -22,6 +22,8 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          soft: "hsl(var(--primary-soft))",
+          glow: "hsl(var(--primary-glow))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -38,6 +40,7 @@ export default {
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
+          soft: "hsl(var(--accent-soft))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
@@ -46,6 +49,12 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        wellness: {
+          calm: "hsl(var(--wellness-calm))",
+          energy: "hsl(var(--wellness-energy))",
+          focus: "hsl(var(--wellness-focus))",
+          sleep: "hsl(var(--wellness-sleep))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -80,10 +89,54 @@ export default {
             height: "0",
           },
         },
+        "float": {
+          "0%, 100%": { transform: "translateY(0px) rotate(0deg)" },
+          "33%": { transform: "translateY(-10px) rotate(1deg)" },
+          "66%": { transform: "translateY(-5px) rotate(-1deg)" },
+        },
+        "fade-in": {
+          "0%": {
+            opacity: "0",
+            transform: "translateY(10px)",
+          },
+          "100%": {
+            opacity: "1",  
+            transform: "translateY(0px)",
+          },
+        },
+        "scale-in": {
+          "0%": {
+            opacity: "0",
+            transform: "scale(0.95)",
+          },
+          "100%": {
+            opacity: "1",
+            transform: "scale(1)",
+          },
+        },
+        "swipe-right": {
+          "0%": { transform: "translateX(0) rotate(0deg)", opacity: "1" },
+          "100%": { transform: "translateX(100%) rotate(20deg)", opacity: "0" },
+        },
+        "swipe-left": {
+          "0%": { transform: "translateX(0) rotate(0deg)", opacity: "1" },
+          "100%": { transform: "translateX(-100%) rotate(-20deg)", opacity: "0" },
+        },
+        "pulse-soft": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.7" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "float": "float 6s ease-in-out infinite",
+        "fade-in": "fade-in 0.3s ease-out",
+        "scale-in": "scale-in 0.2s ease-out",
+        "swipe-right": "swipe-right 0.3s ease-out forwards",
+        "swipe-left": "swipe-left 0.3s ease-out forwards",
+        "pulse-soft": "pulse-soft 3s ease-in-out infinite",
+        "bounce-slow": "bounce 2s infinite",
       },
     },
   },

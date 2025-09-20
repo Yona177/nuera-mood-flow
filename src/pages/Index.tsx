@@ -1,11 +1,17 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useEffect } from 'react';
 
+// This page is no longer used - the app now starts directly from App.tsx
 const Index = () => {
+  useEffect(() => {
+    // Redirect to the main app
+    window.location.href = '/';
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-calm">
+      <div className="text-center animate-fade-in">
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-muted-foreground">Loading Nuera...</p>
       </div>
     </div>
   );
