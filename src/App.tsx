@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,66 +11,76 @@ import ReelsFeed from '@/components/screens/ReelsFeed';
 import Favorites from '@/components/screens/Favorites';
 import Profile from '@/components/screens/Profile';
 import Navigation from '@/components/layout/Navigation';
+import MeditationPlayer from '@/screens/meditation/MeditationPlayer';
+import MeditationComplete from '@/screens/meditation/MeditationComplete';
 
 const queryClient = new QueryClient();
 
 type AppState = 'splash' | 'mood-check' | 'main-app';
-type ActiveTab = 'home' | 'reels' | 'favorites' | 'profile';
 
-const App = () => {
+const AppContent = () => {
   const [appState, setAppState] = useState<AppState>('splash');
-  const [activeTab, setActiveTab] = useState<ActiveTab>('home');
-  const [userMood, setUserMood] = useState<string[]>([]);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSplashComplete = () => {
     setAppState('mood-check');
   };
 
   const handleMoodComplete = (moods: string[], text?: string) => {
-    setUserMood(moods);
     setAppState('main-app');
-    // AI decision logic would go here - for now default to swipe cards
-    setActiveTab('home');
+    navigate('/cards');
   };
 
-  const renderCurrentScreen = () => {
-    if (appState === 'splash') {
-      return <SplashScreen onComplete={handleSplashComplete} />;
-    }
-    
-    if (appState === 'mood-check') {
-      return <MoodCheckIn onComplete={handleMoodComplete} />;
-    }
+  // Don't show navigation on meditation screens
+  const hideNavigation = location.pathname.startsWith('/meditation/');
 
-    // Main app with navigation
-    switch (activeTab) {
-      case 'home':
-        return <SwipeCards />;
-      case 'reels':
-        return <ReelsFeed />;
-      case 'favorites':
-        return <Favorites />;
-      case 'profile':
-        return <Profile />;
-      default:
-        return <SwipeCards />;
-    }
-  };
+  if (appState === 'splash') {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
+  
+  if (appState === 'mood-check') {
+    return <MoodCheckIn onComplete={handleMoodComplete} />;
+  }
 
+  return (
+    <div className="min-h-screen bg-background">
+      <Routes>
+        <Route path="/" element={<SwipeCards />} />
+        <Route path="/cards" element={<SwipeCards />} />
+        <Route path="/reels" element={<ReelsFeed />} />
+        <Route path="/favorites" element={<Favorites />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/meditation/:meditationId" element={<MeditationPlayer />} />
+        <Route path="/meditation/:meditationId/complete" element={<MeditationComplete />} />
+      </Routes>
+      
+      {!hideNavigation && (
+        <Navigation 
+          activeTab={location.pathname === '/reels' ? 'reels' : 
+                   location.pathname === '/favorites' ? 'favorites' :
+                   location.pathname === '/profile' ? 'profile' : 'home'} 
+          onTabChange={(tab) => {
+            switch(tab) {
+              case 'home': navigate('/cards'); break;
+              case 'reels': navigate('/reels'); break; 
+              case 'favorites': navigate('/favorites'); break;
+              case 'profile': navigate('/profile'); break;
+            }
+          }} 
+        />
+      )}
+    </div>
+  );
+};
+
+const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <div className="min-h-screen bg-background">
-          {renderCurrentScreen()}
-          {appState === 'main-app' && (
-            <Navigation 
-              activeTab={activeTab} 
-              onTabChange={(tab) => setActiveTab(tab as ActiveTab)} 
-            />
-          )}
-        </div>
+        <AppContent />
       </TooltipProvider>
     </QueryClientProvider>
   );

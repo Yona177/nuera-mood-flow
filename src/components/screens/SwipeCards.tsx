@@ -2,61 +2,29 @@ import { useState, useRef } from 'react';
 import { Heart, X, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import meditationCard from '@/assets/meditation-card.png';
-import breathingCard from '@/assets/breathing-card.png';
-import journalCard from '@/assets/journal-card.png';
-
-interface Card {
-  id: string;
-  type: 'meditation' | 'breathing' | 'journaling' | 'companion' | 'sleep';
-  title: string;
-  content: string;
-  image?: string;
-  duration?: string;
-}
+import { SEED_CARDS } from '@/data/cards';
+import { useCardActions } from '@/hooks/useCardActions';
+import type { Card } from '@/types/card';
 
 const SwipeCards = () => {
-  const [cards] = useState<Card[]>([
-    {
-      id: '1',
-      type: 'meditation',
-      title: '5-Minute Mindfulness',
-      content: 'Take a moment to center yourself with this gentle meditation. Focus on your breath and let your thoughts flow freely.',
-      image: meditationCard,
-      duration: '5 min'
-    },
-    {
-      id: '2',
-      type: 'breathing',
-      title: 'Box Breathing',
-      content: 'Try this simple breathing technique: Inhale for 4, hold for 4, exhale for 4, hold for 4. Repeat to find your calm.',
-      image: breathingCard,
-      duration: '3 min'
-    },
-    {
-      id: '3',
-      type: 'journaling',
-      title: 'Gratitude Reflection',
-      content: 'What are three things you\'re grateful for today? Write them down and reflect on why they matter to you.',
-      image: journalCard,
-      duration: '2 min'
-    },
-    {
-      id: '4',
-      type: 'companion',
-      title: 'AI Companion Chat',
-      content: 'I\'m here to listen and support you. What\'s on your mind today? Share your thoughts and feelings in a safe space.',
-      duration: 'Open'
-    }
-  ]);
+  const [cards] = useState<Card[]>(SEED_CARDS);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const { onSwipeRight, onSwipeLeft } = useCardActions();
 
   const currentCard = cards[currentIndex];
   
   const handleSwipe = (direction: 'left' | 'right') => {
+    if (currentCard) {
+      if (direction === 'right') {
+        onSwipeRight(currentCard);
+      } else {
+        onSwipeLeft(currentCard);
+      }
+    }
+    
     setSwipeDirection(direction);
     
     setTimeout(() => {
@@ -95,10 +63,10 @@ const SwipeCards = () => {
               swipeDirection === 'right' && "animate-swipe-right"
             )}
           >
-            {currentCard.image && (
+            {(currentCard.image || currentCard.imageUrl) && (
               <div 
                 className="w-full h-48 rounded-2xl bg-cover bg-center mb-6"
-                style={{ backgroundImage: `url(${currentCard.image})` }}
+                style={{ backgroundImage: `url(${currentCard.image || currentCard.imageUrl})` }}
               />
             )}
             
