@@ -8,10 +8,10 @@ import { ArrowLeft, Play, Pause } from "lucide-react";
 
 type Mode = "mp3" | "tts" | "silent";
 
-async function urlExists(url?: string) {
+async function canStream(url?: string) {
   if (!url) return false;
   try {
-    const res = await fetch(url, { method: "HEAD" });
+    const res = await fetch(url, { method: "GET" });
     return res.ok;
   } catch {
     return false;
@@ -27,20 +27,36 @@ export default function MeditationPlayer() {
   const [ready, setReady] = useState(false);
   const [isPlaying, setPlaying] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(m.durationSec);
+  const [voicesReady, setVoicesReady] = useState(false);
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
   const tickRef = useRef<number | null>(null);
   const ttsTimers = useRef<number[]>([]);
 
   // Decide playback mode: mp3 > tts > silent
   useEffect(() => {
     let mounted = true;
+
+    // TTS warm-up
+    if ("speechSynthesis" in window) {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices && voices.length) setVoicesReady(true);
+      else {
+        window.speechSynthesis.onvoiceschanged = () => setVoicesReady(true);
+        // nudge some browsers to init
+        window.speechSynthesis.getVoices();
+      }
+    }
+
     (async () => {
-      const hasMp3 = await urlExists(m.audioUrl);
+      const ok = await canStream(m.audioUrl);
       if (!mounted) return;
-      setMode(hasMp3 ? "mp3" : ("speechSynthesis" in window ? "tts" : "silent"));
+      if (ok) setMode("mp3");
+      else if ("speechSynthesis" in window) setMode("tts");
+      else setMode("silent");
       setReady(true);
     })();
+
     return () => { mounted = false; };
   }, [m.audioUrl]);
 
@@ -50,25 +66,20 @@ export default function MeditationPlayer() {
     setPlaying(true);
     track("meditation_start", { meditationId: m.id, mode });
 
-    // global timer
+    // timer
     tickRef.current = window.setInterval(() => {
       setSecondsLeft((s) => Math.max(0, s - 1));
     }, 1000) as unknown as number;
 
-    if (mode === "mp3") {
-      const a = new Audio(m.audioUrl);
-      a.preload = "auto";
-      a.play().catch(() => {/* user gesture required – the Play button provides it */});
-      audioRef.current = a;
-    } else if (mode === "tts") {
-      // schedule TTS cues
+    if (mode === "mp3" && audioElRef.current) {
+      audioElRef.current.currentTime = 0;
+      audioElRef.current.play().catch(() => {/* user gesture already present via Play click */});
+    } else if (mode === "tts" && voicesReady) {
       const cues = GUIDANCE[m.id] ?? [];
       cues.forEach(({ t, text }) => {
         const h = window.setTimeout(() => {
           const u = new SpeechSynthesisUtterance(text);
-          u.rate = 1.0;   // natural pace
-          u.pitch = 1.0;
-          u.volume = 1.0;
+          u.rate = 1.0; u.pitch = 1.0; u.volume = 1.0;
           window.speechSynthesis.speak(u);
         }, t * 1000);
         ttsTimers.current.push(h as unknown as number);
@@ -79,7 +90,7 @@ export default function MeditationPlayer() {
   const pause = () => {
     setPlaying(false);
     if (tickRef.current) window.clearInterval(tickRef.current);
-    if (mode === "mp3") audioRef.current?.pause();
+    if (mode === "mp3") audioElRef.current?.pause();
     if (mode === "tts") window.speechSynthesis.pause();
   };
 
@@ -90,14 +101,16 @@ export default function MeditationPlayer() {
         setSecondsLeft((s) => Math.max(0, s - 1));
       }, 1000) as unknown as number;
     }
-    if (mode === "mp3") audioRef.current?.play();
+    if (mode === "mp3") audioElRef.current?.play();
     if (mode === "tts") window.speechSynthesis.resume();
   };
 
   const stopAll = () => {
     if (tickRef.current) window.clearInterval(tickRef.current);
-    audioRef.current?.pause();
-    audioRef.current = null;
+    if (mode === "mp3" && audioElRef.current) {
+      audioElRef.current.pause();
+      audioElRef.current.currentTime = 0;
+    }
     if (mode === "tts") {
       window.speechSynthesis.cancel();
       ttsTimers.current.forEach((id) => window.clearTimeout(id));
@@ -148,6 +161,9 @@ export default function MeditationPlayer() {
           <div className="w-10" /> {/* Spacer */}
         </div>
 
+        {/* hidden audio element to satisfy autoplay policies */}
+        <audio ref={audioElRef} src={m.audioUrl} preload="auto" playsInline />
+        
         <div className="text-center">
           {/* Cover Image */}
           <div className="mb-8">
