@@ -1,62 +1,131 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MEDITATIONS } from "@/data/meditations";
+import { GUIDANCE } from "@/data/guidance";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useParams } from "react-router-dom";
 import { track } from "@/utils/analytics";
 import { ArrowLeft, Play, Pause } from "lucide-react";
 
-export default function MeditationPlayer() {
-  const { meditationId = "mindful5" } = useParams();
-  const nav = useNavigate();
-  const m = useMemo(() => MEDITATIONS[meditationId!] ?? MEDITATIONS["mindful5"], [meditationId]);
+type Mode = "mp3" | "tts" | "silent";
 
-  const [isPlaying, setPlaying] = useState(true);
+async function urlExists(url?: string) {
+  if (!url) return false;
+  try {
+    const res = await fetch(url, { method: "HEAD" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export default function MeditationPlayer() {
+  const { meditationId = "mindful7" } = useParams();
+  const nav = useNavigate();
+  const m = useMemo(() => MEDITATIONS[meditationId!] ?? MEDITATIONS["mindful7"], [meditationId]);
+
+  const [mode, setMode] = useState<Mode>("silent");
+  const [ready, setReady] = useState(false);
+  const [isPlaying, setPlaying] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(m.durationSec);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const tickRef = useRef<number | null>(null);
+  const ttsTimers = useRef<number[]>([]);
 
+  // Decide playback mode: mp3 > tts > silent
   useEffect(() => {
-    track("meditation_start", { meditationId: m.id });
-    const audio = new Audio(m.audioUrl);
-    audio.preload = "auto";
-    audio.loop = true; // Loop the audio for the full duration
-    audioRef.current = audio;
+    let mounted = true;
+    (async () => {
+      const hasMp3 = await urlExists(m.audioUrl);
+      if (!mounted) return;
+      setMode(hasMp3 ? "mp3" : ("speechSynthesis" in window ? "tts" : "silent"));
+      setReady(true);
+    })();
+    return () => { mounted = false; };
+  }, [m.audioUrl]);
 
-    const start = () => {
-      audioRef.current?.play().catch(() => {
-        // Autoplay blocked: user can tap play
-        setPlaying(false);
+  // Start/stop timer + audio/tts
+  const start = () => {
+    if (!ready) return;
+    setPlaying(true);
+    track("meditation_start", { meditationId: m.id, mode });
+
+    // global timer
+    tickRef.current = window.setInterval(() => {
+      setSecondsLeft((s) => Math.max(0, s - 1));
+    }, 1000) as unknown as number;
+
+    if (mode === "mp3") {
+      const a = new Audio(m.audioUrl);
+      a.preload = "auto";
+      a.play().catch(() => {/* user gesture required – the Play button provides it */});
+      audioRef.current = a;
+    } else if (mode === "tts") {
+      // schedule TTS cues
+      const cues = GUIDANCE[m.id] ?? [];
+      cues.forEach(({ t, text }) => {
+        const h = window.setTimeout(() => {
+          const u = new SpeechSynthesisUtterance(text);
+          u.rate = 1.0;   // natural pace
+          u.pitch = 1.0;
+          u.volume = 1.0;
+          window.speechSynthesis.speak(u);
+        }, t * 1000);
+        ttsTimers.current.push(h as unknown as number);
       });
+    }
+  };
+
+  const pause = () => {
+    setPlaying(false);
+    if (tickRef.current) window.clearInterval(tickRef.current);
+    if (mode === "mp3") audioRef.current?.pause();
+    if (mode === "tts") window.speechSynthesis.pause();
+  };
+
+  const resume = () => {
+    setPlaying(true);
+    if (!tickRef.current) {
       tickRef.current = window.setInterval(() => {
         setSecondsLeft((s) => Math.max(0, s - 1));
       }, 1000) as unknown as number;
-    };
+    }
+    if (mode === "mp3") audioRef.current?.play();
+    if (mode === "tts") window.speechSynthesis.resume();
+  };
 
-    start();
-
-    return () => {
-      if (tickRef.current) window.clearInterval(tickRef.current);
-      audioRef.current?.pause();
-      audioRef.current = null;
-    };
-  }, [m.id, m.audioUrl, m.durationSec]);
+  const stopAll = () => {
+    if (tickRef.current) window.clearInterval(tickRef.current);
+    audioRef.current?.pause();
+    audioRef.current = null;
+    if (mode === "tts") {
+      window.speechSynthesis.cancel();
+      ttsTimers.current.forEach((id) => window.clearTimeout(id));
+      ttsTimers.current = [];
+    }
+  };
 
   useEffect(() => {
-    if (secondsLeft === 0) {
-      audioRef.current?.pause();
-      if (tickRef.current) window.clearInterval(tickRef.current);
-      track("meditation_complete", { meditationId: m.id, durationSec: m.durationSec });
+    if (secondsLeft === 0 && ready) {
+      stopAll();
+      track("meditation_complete", { meditationId: m.id, durationSec: m.durationSec, mode });
       nav(`/meditation/${m.id}/complete`);
     }
-  }, [secondsLeft, m.id, m.durationSec, nav]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondsLeft, ready]);
+
+  useEffect(() => () => stopAll(), []); // cleanup
 
   const togglePlay = () => {
-    setPlaying((p) => {
-      const next = !p;
-      if (next) audioRef.current?.play();
-      else audioRef.current?.pause();
-      return next;
-    });
+    if (isPlaying) {
+      pause();
+    } else {
+      if (secondsLeft === m.durationSec) {
+        start();
+      } else {
+        resume();
+      }
+    }
   };
 
   const mins = Math.floor(secondsLeft / 60);
@@ -70,7 +139,7 @@ export default function MeditationPlayer() {
           <Button
             variant="ghost"
             size="sm" 
-            onClick={() => nav(-1)}
+            onClick={() => { stopAll(); nav(-1); }}
             className="rounded-full w-10 h-10 p-0"
           >
             <ArrowLeft size={20} />
@@ -108,7 +177,7 @@ export default function MeditationPlayer() {
                     {mins}:{secs}
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">
-                    {isPlaying ? "Playing" : "Paused"}
+                    {isPlaying ? "Playing" : ready ? "Ready" : "Loading..."}
                   </div>
                 </div>
               </div>
@@ -143,6 +212,7 @@ export default function MeditationPlayer() {
           <div className="flex justify-center gap-4">
             <Button 
               onClick={togglePlay} 
+              disabled={!ready}
               className="rounded-full w-16 h-16 bg-primary hover:bg-primary/90 shadow-card"
               size="lg"
             >
@@ -152,11 +222,15 @@ export default function MeditationPlayer() {
 
           <Button 
             variant="ghost" 
-            onClick={() => nav(-1)}
+            onClick={() => { stopAll(); nav(-1); }}
             className="mt-8 text-muted-foreground"
           >
             Exit Meditation
           </Button>
+
+          <p className="mt-4 text-xs text-muted-foreground">
+            Voice mode: {mode === "mp3" ? "Recorded audio" : mode === "tts" ? "Speech synthesis" : "Silent"}
+          </p>
         </div>
       </div>
     </div>
