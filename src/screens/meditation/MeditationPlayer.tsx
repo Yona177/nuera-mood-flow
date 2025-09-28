@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate, useParams } from "react-router-dom";
 import { track } from "@/utils/analytics";
 import { ArrowLeft, Play, Pause } from "lucide-react";
+import SoundDebugOverlay from "@/components/dev/SoundDebugOverlay";
 
 type Mode = "mp3" | "tts" | "silent";
 
@@ -143,6 +144,7 @@ export default function MeditationPlayer() {
 
   const mins = Math.floor(secondsLeft / 60);
   const secs = (secondsLeft % 60).toString().padStart(2, "0");
+  const showDebug = import.meta.env.DEV || localStorage.getItem("nuera:soundDebug") === "1";
 
   return (
     <div className="min-h-screen bg-gradient-calm">
@@ -249,6 +251,8 @@ export default function MeditationPlayer() {
           </p>
         </div>
       </div>
+      
+      <SoundDebugOverlay audioUrl={m.audioUrl} visible={showDebug} />
     </div>
   );
 }
