@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
+
 // Short base64 encoded MP3 beep (440Hz sine wave, ~500ms)
 const BASE64_BEEP =
   "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAASAAAOsAAhISEhISEhISEhISEhITExMTExMTExMTExMTExQUFBQUFBQUFBQUFBQUFBUVFRUVFRUVFRUVFRUVFRYWFhYWFhYWFhYWFhYWFhcXFxcXFxcXFxcXFxcXFxgYGBgYGBgYGBgYGBgYGBkZGRkZGRkZGRkZGRkZGRoaGhoaGhoaGhoaGhoaGhsbGxsbGxsbGxsbGxsbGxwcHBwcHBwcHBwcHBwcHB0dHR0dHR0dHR0dHR0dHR4eHh4eHh4eHh4eHh4eHh8fHx8fHx8fHx8fHx8fHx//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////";
