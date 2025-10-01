@@ -5,28 +5,28 @@ import journalCard from '@/assets/journal-card.png';
 
 export const SEED_CARDS: Card[] = [
   {
-    id: "card_mindful7",
+    id: "card_mindful5",
     type: "meditation",
-    title: "7-Minute Mindfulness",
-    subtitle: "Guided attention + soft breathing",
-    content: "A guided practice to open attention and soften the breath with gentle voice instruction.",
+    title: "5-Minute Mindfulness",
+    subtitle: "Center yourself and breathe",
+    content: "Take a moment to center yourself with this gentle meditation. Focus on your breath and let your thoughts flow freely.",
     imageUrl: meditationCard,
     image: meditationCard, // Keep compatibility
-    durationSec: 420,
-    duration: "7 min", // Keep compatibility
-    action: { kind: "open_meditation", meditationId: "mindful7" }
+    durationSec: 300,
+    duration: "5 min", // Keep compatibility
+    action: { kind: "open_meditation", meditationId: "mindful5" }
   },
   {
-    id: "card_calm3",
+    id: "card_calm2",
     type: "meditation", 
-    title: "3-Minute Calm",
-    subtitle: "A brief guided reset",
-    content: "Short guided reset with gentle breathing instructions to help you find calm quickly.",
+    title: "2-Minute Calm",
+    subtitle: "Quick reset for busy moments",
+    content: "A short but powerful meditation to reset your mind and find instant calm wherever you are.",
     imageUrl: meditationCard,
     image: meditationCard,
-    durationSec: 180,
-    duration: "3 min",
-    action: { kind: "open_meditation", meditationId: "calm3" }
+    durationSec: 120,
+    duration: "2 min",
+    action: { kind: "open_meditation", meditationId: "calm2" }
   },
   {
     id: "card_breathing",
