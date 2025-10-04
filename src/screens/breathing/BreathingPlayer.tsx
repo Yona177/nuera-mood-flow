@@ -17,15 +17,19 @@ export default function BreathingPlayer() {
 
   const [isPlaying, setPlaying] = useState(true);
   const [sessionLeft, setSessionLeft] = useState(pattern.sessionSec);
+
+  // UI state (derived from refs below)
   const [phase, setPhase] = useState<Phase>("inhale");
   const [phaseLeft, setPhaseLeft] = useState(pattern.cycle.inhale);
 
-  // animation scale: interpolate based on phase progress
+  // Refs to avoid stale-closure bugs inside setInterval
+  const phaseRef = useRef<Phase>("inhale");
+  const phaseLeftRef = useRef<number>(pattern.cycle.inhale);
+  const tickRef = useRef<number | null>(null);
+
+  // animation scale
   const minScale = pattern.minScale ?? 0.9;
   const maxScale = pattern.maxScale ?? 1.35;
-
-  // Track per-second ticks
-  const tickRef = useRef<number | null>(null);
 
   const phaseDuration = (p: Phase) =>
     p === "inhale" ? pattern.cycle.inhale
@@ -39,59 +43,61 @@ export default function BreathingPlayer() {
     : p === "exhale" ? "hold2"
     : "inhale";
 
+  // Start / reset when pattern changes
   useEffect(() => {
-    track("breathing_start", { breathingId: pattern.id });
-    setPhase("inhale");
-    setPhaseLeft(pattern.cycle.inhale);
+    // reset state
+    setSessionLeft(pattern.sessionSec);
+    phaseRef.current = "inhale";
+    phaseLeftRef.current = pattern.cycle.inhale;
+    setPhase(phaseRef.current);
+    setPhaseLeft(phaseLeftRef.current);
 
-    const tick = () => {
-      setSessionLeft(s => Math.max(0, s - 1));
-      setPhaseLeft(ps => {
-        if (ps > 1) return ps - 1;
-        // phase complete → advance
-        const next = nextPhase(phase);
-        setPhase(next);
-        return phaseDuration(next);
-      });
+    // analytics
+    track("breathing_start", { breathingId: pattern.id });
+
+    // (re)start ticking if playing
+    const start = () => {
+      if (tickRef.current) window.clearInterval(tickRef.current);
+      if (!isPlaying) return;
+      tickRef.current = window.setInterval(() => {
+        // session countdown
+        setSessionLeft((s) => Math.max(0, s - 1));
+
+        // phase countdown via refs (no stale closure)
+        if (phaseLeftRef.current > 1) {
+          phaseLeftRef.current -= 1;
+          setPhaseLeft(phaseLeftRef.current);
+        } else {
+          // advance phase
+          const next = nextPhase(phaseRef.current);
+          phaseRef.current = next;
+          const dur = phaseDuration(next);
+          phaseLeftRef.current = dur;
+          setPhase(next);
+          setPhaseLeft(dur);
+        }
+      }, 1000) as unknown as number;
     };
 
-    if (isPlaying) {
-      tickRef.current = window.setInterval(tick, 1000) as unknown as number;
-    }
+    start();
 
     return () => {
       if (tickRef.current) window.clearInterval(tickRef.current);
+      tickRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // start once
+    // re-run when pattern or play/pause toggles
+  }, [pattern.id, pattern.sessionSec, pattern.cycle.inhale, pattern.cycle.hold, pattern.cycle.exhale, pattern.cycle.hold2, isPlaying]);
 
-  // pause/resume handler
-  useEffect(() => {
-    if (tickRef.current) { window.clearInterval(tickRef.current); tickRef.current = null; }
-    if (isPlaying) {
-      tickRef.current = window.setInterval(() => {
-        setSessionLeft(s => Math.max(0, s - 1));
-        setPhaseLeft(ps => {
-          if (ps > 1) return ps - 1;
-          const next = nextPhase(phase);
-          setPhase(next);
-          return phaseDuration(next);
-        });
-      }, 1000) as unknown as number;
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying]);
-
-  // complete session
+  // Complete session
   useEffect(() => {
     if (sessionLeft === 0) {
       if (tickRef.current) window.clearInterval(tickRef.current);
       track("breathing_complete", { breathingId: pattern.id, sessionSec: pattern.sessionSec });
-      nav(-1); // return to previous screen or navigate to a "complete" page if you prefer
+      nav(-1);
     }
   }, [sessionLeft, nav, pattern.id, pattern.sessionSec]);
 
-  // compute scale for animation
+  // animation scale calculation
   const total = phaseDuration(phase);
   const progress = 1 - phaseLeft / Math.max(1, total);
   let scale = 1;
@@ -100,17 +106,12 @@ export default function BreathingPlayer() {
   } else if (phase === "exhale") {
     scale = maxScale - (maxScale - minScale) * progress; // contract
   } else {
-    // hold phases: keep last edge size
-    scale = phase === "hold" ? maxScale : minScale;
+    scale = phase === "hold" ? maxScale : minScale;       // holds keep edge size
   }
 
   const minutes = Math.floor(sessionLeft / 60);
   const seconds = String(sessionLeft % 60).padStart(2, "0");
-
-  const phaseLabel =
-    phase === "inhale" ? "Inhale"
-    : phase === "exhale" ? "Exhale"
-    : "Hold";
+  const phaseLabel = phase === "inhale" ? "Inhale" : phase === "exhale" ? "Exhale" : "Hold";
 
   return (
     <div className="min-h-screen bg-gradient-calm">
