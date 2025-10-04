@@ -14,6 +14,9 @@ import Navigation from '@/components/layout/Navigation';
 import MeditationPlayer from '@/screens/meditation/MeditationPlayer';
 import MeditationComplete from '@/screens/meditation/MeditationComplete';
 
+// 👇 NEW: import the breathing player
+import BreathingPlayer from '@/screens/breathing/BreathingPlayer';
+
 const queryClient = new QueryClient();
 
 type AppState = 'splash' | 'mood-check' | 'main-app';
@@ -32,8 +35,10 @@ const AppContent = () => {
     navigate('/cards');
   };
 
-  // Don't show navigation on meditation screens
-  const hideNavigation = location.pathname.startsWith('/meditation/');
+  // Hide bottom nav on full-screen flows (meditation + breathing)
+  const hideNavigation =
+    location.pathname.startsWith('/meditation/') ||
+    location.pathname.startsWith('/breathing/');
 
   if (appState === 'splash') {
     return <SplashScreen onComplete={handleSplashComplete} />;
@@ -51,15 +56,22 @@ const AppContent = () => {
         <Route path="/reels" element={<ReelsFeed />} />
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/profile" element={<Profile />} />
+
+        {/* Meditation routes */}
         <Route path="/meditation/:meditationId" element={<MeditationPlayer />} />
         <Route path="/meditation/:meditationId/complete" element={<MeditationComplete />} />
+
+        {/* 👇 NEW: Breathing route */}
+        <Route path="/breathing/:breathingId" element={<BreathingPlayer />} />
       </Routes>
       
       {!hideNavigation && (
         <Navigation 
-          activeTab={location.pathname === '/reels' ? 'reels' : 
-                   location.pathname === '/favorites' ? 'favorites' :
-                   location.pathname === '/profile' ? 'profile' : 'home'} 
+          activeTab={
+            location.pathname === '/reels' ? 'reels' : 
+            location.pathname === '/favorites' ? 'favorites' :
+            location.pathname === '/profile' ? 'profile' : 'home'
+          } 
           onTabChange={(tab) => {
             switch(tab) {
               case 'home': navigate('/cards'); break;
