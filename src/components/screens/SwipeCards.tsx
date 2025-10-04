@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom'; // 👈 NEW
 import { Heart, X, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -13,13 +14,44 @@ const SwipeCards = () => {
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const { onSwipeRight, onSwipeLeft } = useCardActions();
+  const navigate = useNavigate(); // 👈 NEW
 
   const currentCard = cards[currentIndex];
   
   const handleSwipe = (direction: 'left' | 'right') => {
     if (currentCard) {
       if (direction === 'right') {
+        // Existing like handler
         onSwipeRight(currentCard);
+
+        // 👇 NEW: Route based on card.action
+        const a = currentCard.action;
+        if (a) {
+          switch (a.kind) {
+            case 'open_meditation':
+              navigate(`/meditation/${a.meditationId}`);
+              break;
+            case 'open_breathing':        // preferred new action
+              navigate(`/breathing/${a.breathingId}`);
+              break;
+            case 'open_breath':           // legacy support
+              navigate(`/breathing/${a.patternId}`);
+              break;
+            case 'open_cbt':
+              // navigate(`/cbt/${a.tipId}`);
+              break;
+            case 'open_companion':
+              // navigate(`/companion`);
+              break;
+            case 'open_sleep':
+              // navigate(`/sleep/${a.routineId}`);
+              break;
+            case 'none':
+            default:
+              // no-op
+              break;
+          }
+        }
       } else {
         onSwipeLeft(currentCard);
       }
