@@ -37,7 +37,7 @@ export const SEED_CARDS: Card[] = [
     image: breathingCard,
     durationSec: 180,
     duration: "3 min",
-    action: { kind: "none" }
+    action: { kind: "open_breathing", breathingId: "box44" }
   },
   {
     id: "card_journal",
