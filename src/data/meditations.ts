@@ -19,7 +19,7 @@ export const MEDITATIONS: Record<string, Meditation> = {
     title: "2-Minute Calm",
     subtitle: "Short reset with gentle guidance",
     durationSec: 120,
-    audioUrl: "/audio/calm2.mp3",
+    audioUrl: "/audio/mindful5.mp3",
     coverUrl: "/images/meditations/calm2.jpg",
     tags: ["calm", "reset"]
   },
